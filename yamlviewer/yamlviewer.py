@@ -105,7 +105,7 @@ class YamlViewer(QtCore.QObject):
     def load(self, fname):
         with open(fname, "rt") as f:
             s = f.read()
-        self._content = yaml.load(s)
+        self._content = yaml.load(s, Loader=MapLoader)
         self._root.takeChildren()
         self.populate(self._content, self._root, self._marker)
         self._fname = fname
@@ -115,6 +115,15 @@ class YamlViewer(QtCore.QObject):
         debug("expanded, item=%s, map=%s" % (item, self._item_map.get(item, "N/A")))
         h = self._item_map[item]
         h(item)
+
+# MapLoader makes all object/python instances into maps.
+class MapLoader(yaml.SafeLoader):
+    def construct_x(self, tag_suffix, node):
+        debug("node.tag=%s, tag_suffix=%s." % (node.tag, tag_suffix))
+        return self.construct_mapping(node)
+MapLoader.add_multi_constructor(
+        "tag:yaml.org,2002:python/object",
+        MapLoader.construct_x)
 
 def main():
     configuration = {
