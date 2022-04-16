@@ -35,14 +35,15 @@
 #
 
 
-from PyQt4 import QtCore, QtGui, uic
+from PySide2 import QtCore, QtGui, QtUiTools, QtWidgets
+from .ui import Ui_MainWindow
 import os
 import sys
 import yaml
 
 def debug(msg):
     if False:
-        print "DEBUG %s" % msg
+        print("DEBUG %s" % msg)
 
 class YamlViewer(QtCore.QObject):
     def __init__(self, view, controller, configuration, filename=None):
@@ -50,12 +51,12 @@ class YamlViewer(QtCore.QObject):
         self._view = view
         self._controller = controller
         self._configuration = configuration
-        view.action_Open.activated.connect(self.file_open)
-        view.action_Reload.activated.connect(self.re_load)
+        view.action_Open.triggered.connect(self.file_open)
+        view.action_Reload.triggered.connect(self.re_load)
         view.action_Reload.setShortcut(QtGui.QKeySequence("F5"))
         self._root = view.yaml.invisibleRootItem()
         self._item_map = { }
-        self._marker = QtGui.QTreeWidgetItem(["marker"])
+        self._marker = QtWidgets.QTreeWidgetItem(["marker"])
         view.yaml.itemExpanded.connect(self.expanded)
         if filename:
             self.load(filename)
@@ -77,25 +78,25 @@ class YamlViewer(QtCore.QObject):
         def add(k, v):
             debug("type(v)=%s." % (type(v),))
             if type(v) == dict:
-                x = QtGui.QTreeWidgetItem([k,])
-                z = QtGui.QTreeWidgetItem(["marker"])
+                x = QtWidgets.QTreeWidgetItem([k,])
+                z = QtWidgets.QTreeWidgetItem(["marker"])
                 self._item_map[x] = lambda item, x=x, v=v: self.populate(v, x, z)
                 x.addChild(z)
                 item.addChild(x)
                 return
             if type(v) == list:
-                x = QtGui.QTreeWidgetItem([k, "(list with %u item%s)" % (len(v), "" if len(v)==1 else "s")])
-                z = QtGui.QTreeWidgetItem(["marker"])
+                x = QtWidgets.QTreeWidgetItem([k, "(list with %u item%s)" % (len(v), "" if len(v)==1 else "s")])
+                z = QtWidgets.QTreeWidgetItem(["marker"])
                 self._item_map[x] = lambda item, x=x, v=v: self.populate(v, x, z)
                 x.addChild(z)
                 item.addChild(x)
                 return
             debug("type(k)=%s, type(v)=%s." % (type(k), type(v)))
-            x = QtGui.QTreeWidgetItem([k, "%s" % v])
+            x = QtWidgets.QTreeWidgetItem([k, "%s" % v])
             self._item_map[x] = self.good
             item.addChild(x)
         if type(content) == dict:
-            for k, v in content.iteritems():
+            for k, v in content.items():
                 add(k, v)
             return
         if type(content) == list:
@@ -132,16 +133,15 @@ def main():
     try:
         with open(os.path.expanduser("~/.yamlviewer.yaml"), "rt") as f:
             s = f.read()
-            c = yaml.load(s)
+            c = yaml.load(s, Loader=yaml.SafeLoader)
             configuration.update(c)
     except IOError:
         # file not found
         pass
     try:
-        app = QtGui.QApplication(sys.argv)
-        View, Controller = uic.loadUiType("yamlviewer.ui")
-        controller = Controller(parent=None)
-        view = View()
+        app = QtWidgets.QApplication(sys.argv)
+        controller = QtWidgets.QMainWindow(parent=None)
+        view = Ui_MainWindow()
         view.setupUi(controller)
         filename = None
         if len(sys.argv) > 1:
